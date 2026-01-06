@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { BrowserQRCodeReader, IScannerControls } from '@zxing/library';
+import { BrowserQRCodeReader } from '@zxing/library';
 
 interface UseQRScannerResult {
   videoRef: React.RefObject<HTMLVideoElement>;
@@ -17,12 +17,12 @@ export function useQRScanner(): UseQRScannerResult {
   const [result, setResult] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isScanning, setIsScanning] = useState(false);
-  const controlsRef = useRef<IScannerControls | null>(null);
+  const codeReaderRef = useRef<BrowserQRCodeReader | null>(null);
 
   const stopScanning = useCallback(() => {
-    if (controlsRef.current) {
-      controlsRef.current.stop();
-      controlsRef.current = null;
+    if (codeReaderRef.current) {
+      codeReaderRef.current.reset();
+      codeReaderRef.current = null;
     }
     setIsScanning(false);
   }, []);
@@ -38,6 +38,7 @@ export function useQRScanner(): UseQRScannerResult {
 
     try {
       const codeReader = new BrowserQRCodeReader();
+      codeReaderRef.current = codeReader;
 
       // 利用可能なカメラデバイスを取得
       const videoInputDevices = await codeReader.listVideoInputDevices();
@@ -52,7 +53,7 @@ export function useQRScanner(): UseQRScannerResult {
       ) || videoInputDevices[0];
 
       // QRコードスキャン開始
-      const controls = await codeReader.decodeFromVideoDevice(
+      await codeReader.decodeFromVideoDevice(
         selectedDevice.deviceId,
         videoRef.current,
         (result, error) => {
@@ -65,8 +66,6 @@ export function useQRScanner(): UseQRScannerResult {
           }
         }
       );
-
-      controlsRef.current = controls;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '不明なエラーが発生しました';
       setError(errorMessage);
